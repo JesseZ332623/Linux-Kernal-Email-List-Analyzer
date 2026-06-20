@@ -15,6 +15,10 @@ app:
     timeout: 30000
     # 是否启用调试模式
     debug: false
+    # 代理地址
+    proxy-host: 127.0.0.1
+    # 代理端口号
+    proxy-port: 10808
     # 连接邮箱服务的用户名
     username: "zhj3191955858@gmail.com"
     # 连接邮箱服务的十六位 App 专用密码（从数据库中获取）
