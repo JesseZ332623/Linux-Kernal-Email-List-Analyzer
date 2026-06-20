@@ -1,4 +1,4 @@
-# RabbitMQ 属性配置类
+# RabbitMQ 属性配置。
 
 spring:
   rabbitmq:
@@ -11,8 +11,8 @@ spring:
     listener:
       simple:
         acknowledge-mode: manual # 手动确认模式
-        concurrency: 15      # 并发消费者数量
-        max-concurrency: 30  # 最大并发消费者数量
+        concurrency: 50      # 并发消费者数量
+        max-concurrency: 75  # 最大并发消费者数量
         prefetch: 1          # 每个消费者一次只取 1 条消息
 
 app:

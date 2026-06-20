@@ -37,6 +37,12 @@ public class EmailReceiverProperties
     /** 是否启用调试模式 */
     private boolean debug;
 
+    /** 代理地址 */
+    private String proxyHost;
+
+    /** 代理端口号 */
+    private String proxyPort;
+
     /** 连接邮箱服务的用户名 */
     private String username;
 
