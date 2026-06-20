@@ -90,11 +90,11 @@ public class SingleImapConnectionImpl implements SingleImapConnection
             if (this.isConnected())
             {
                 this.store.close();
-                log.info("Closing email servive connection...");
+                log.info("Closing email service connection...");
             }
         }
         catch (MessagingException exception) {
-            log.error("Closing email servive connection failed...", exception);
+            log.error("Closing email service connection failed...", exception);
         }
     }
 
