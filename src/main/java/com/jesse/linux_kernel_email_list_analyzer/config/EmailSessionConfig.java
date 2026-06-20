@@ -28,6 +28,8 @@ public class EmailSessionConfig
         props.setProperty("mail.imaps.connectiontimeout", String.valueOf(properties.getConnectionTimeout()));
         props.setProperty("mail.imaps.timeout", String.valueOf(properties.getTimeout()));
         props.setProperty("mail.debug", String.valueOf(properties.isDebug()));
+        props.setProperty("mail.imaps.proxy.host", properties.getProxyHost());
+        props.setProperty("mail.imaps.proxy.port", properties.getProxyPort());
 
         return Session.getInstance(props);
     }
