@@ -5,6 +5,7 @@ import com.jesse.linux_kernel_email_list_analyzer.components.SingleImapConnectio
 import com.jesse.linux_kernel_email_list_analyzer.pojo.PlainTextEmail;
 import com.jesse.linux_kernel_email_list_analyzer.properties.LKMLRabbitMQProperties;
 import jakarta.mail.*;
+import jakarta.mail.internet.MimeMultipart;
 import jakarta.mail.search.FlagTerm;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -137,6 +139,35 @@ public class KernelEmailPusherImpl implements KernelEmailPusher
         return fetchProfile;
     }
 
+    /**
+     * 虽然 LKML 100% 是纯文本邮件，
+     * 但邮箱服务可能会包装成 {@link MimeMultipart}，所以本方法做的就是提取内部的文本，
+     * 不要出现：
+     *
+     * <pre>
+     *      Skip non-plain-text email. Content Type: MimeMultipart,
+     *      Subject Re: [PATCH bpf-next v4 3/3] selftests/bpf: Add bpf_fib_lookup() VLAN flag tests
+     * </pre>
+     *
+     * 这种意外的丢件情况。
+     */
+    private String
+    getPlainTextFromMimeMultipart(MimeMultipart multipart)
+        throws IOException, MessagingException
+    {
+        for (int index = 0; index < multipart.getCount(); ++index)
+        {
+            final BodyPart bodyPart
+                = multipart.getBodyPart(index);
+
+            if (bodyPart.isMimeType("text/plain")) {
+                return (String) bodyPart.getContent();
+            }
+        }
+
+        return null;
+    }
+
     /** 内核补丁邮件解析。*/
     private PlainTextEmail
     parseToPlainText(Message message)
@@ -146,16 +177,28 @@ public class KernelEmailPusherImpl implements KernelEmailPusher
             final PlainTextEmail plainTextEmail = new PlainTextEmail();
 
             // Message 采用懒加载策略，获取正文是一次网络 I/O
-            final Object content       = message.getContent();
-            final String[] messageIds  = message.getHeader("Message-ID");
-            final Address[] from       = message.getFrom();
-            final Instant sentInstant  = message.getSentDate().toInstant();
+            final Object    content     = message.getContent();
+            final String[]  messageIds  = message.getHeader("Message-ID");
+            final Address[] from        = message.getFrom();
+            final Instant   sentInstant = message.getSentDate().toInstant();
 
-            // 如果这封邮件并不是纯文本邮件，
-            // 虽然 LKML 邮件 100% 是纯文本邮箱服务这边可能意外的拉取了别的邮件，
-            // 直接返回 null
-            if (!(content instanceof String))
+            // 如果邮件内容本身就是文本
+            if (content instanceof String) {
+                plainTextEmail.setTextContent(String.valueOf(content));
+            }
+            else if (content instanceof MimeMultipart)
             {
+                // 如果邮件被邮箱服务包装成了 MimeMultipart，
+                // 去提取内部的文本
+                plainTextEmail.setTextContent(
+                    this.getPlainTextFromMimeMultipart((MimeMultipart) content)
+                );
+            }
+            else
+            {
+                // 如果这封邮件并不是纯文本邮件，
+                // 可能是邮箱服务这边可能意外的拉取了别的邮件，
+                // 直接返回 null 丢弃即可
                 log.warn(
                     "Skip non-plain-text email. Content Type: {}, Subject {}",
                     content.getClass().getSimpleName(),
@@ -163,10 +206,6 @@ public class KernelEmailPusherImpl implements KernelEmailPusher
                 );
 
                 return null;
-            }
-
-            if (message.isMimeType("text/plain")) {
-                plainTextEmail.setTextContent(String.valueOf(content));
             }
 
             plainTextEmail.setMessageId(
@@ -355,7 +394,7 @@ public class KernelEmailPusherImpl implements KernelEmailPusher
 
             try
             {
-                inbox = store.getFolder("[Gmail]/All Mail");
+                inbox = store.getFolder("INBOX");
                 inbox.open(Folder.READ_WRITE);
 
                 // (1) 从邮箱服务拉取所有的未读邮件，保留最新的前 limit 封返回。
