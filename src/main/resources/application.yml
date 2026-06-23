@@ -26,3 +26,5 @@ spring:
       - classpath:config/jdbc.yml
       - classpath:config/email.yml
       - classpath:config/rabbitmq.yml
+      - classpath:config/deepseek-chat.yml
+      - classpath:config/report-persistence.yml
