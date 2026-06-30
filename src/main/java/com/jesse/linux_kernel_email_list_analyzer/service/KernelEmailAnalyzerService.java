@@ -186,8 +186,7 @@ public class KernelEmailAnalyzerService
                 );
 
             // (3) 写到本地文件中去
-            this.reportWriter
-                .write(kernalEmail.getSubject(), htmlText);
+            this.reportWriter.write(kernalEmail, htmlText);
 
             // (4) 确认消息
             channel.basicAck(deliveryTag, false);
@@ -200,6 +199,7 @@ public class KernelEmailAnalyzerService
             {
                 // 目前的做法略显粗暴，在分析过程中出现了任何错误，
                 // 这封邮件都入死信队列。
+                log.warn("Delivery message {} to dead letter queue.", deliveryTag);
                 channel.basicNack(deliveryTag, false, false);
             }
             catch (IOException ioException)
